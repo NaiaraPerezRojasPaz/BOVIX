@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOVIX - Gestión Ganadera</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    .page { display: none; }
+    .page.active { display: block; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .tab-btn.active { border-bottom: 2px solid #16a34a; color: #16a34a; font-weight: 600; }
+    .nav-item.active { background: #1a3a1e; color: #fff !important; }
+    .badge-activo     { background:#dcfce7; color:#166534; }
+    .badge-vendido    { background:#fef9c3; color:#854d0e; }
+    .badge-trasladado { background:#dbeafe; color:#1e40af; }
+    .badge-faenado    { background:#fee2e2; color:#991b1b; }
+    .badge-fallecido  { background:#f3f4f6; color:#374151; }
+    .alerta-alta  { border-left:4px solid #ef4444; background:#fff5f5; }
+    .alerta-media { border-left:4px solid #f59e0b; background:#fffbeb; }
+    .alerta-baja  { border-left:4px solid #3b82f6; background:#eff6ff; }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+<div class="flex h-screen overflow-hidden">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="w-56 bg-[#1a3a1e] flex flex-col flex-shrink-0">
+    <div class="p-5 border-b border-[#2d5a32]">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-green-500 rounded-lg flex items-center justify-center font-bold text-white">B</div>
+        <div>
+          <h1 class="font-bold text-white text-sm">BOVIX</h1>
+          <p class="text-xs text-green-300">Gestión Ganadera</p>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <button onclick="navigate('dashboard')"    id="nav-dashboard"    class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-green-100 hover:bg-[#2d5a32] transition-colors text-left">🏠 Dashboard</button>
+      <button onclick="navigate('ganado')"       id="nav-ganado"       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-green-100 hover:bg-[#2d5a32] transition-colors text-left">🐄 Ganado</button>
+      <button onclick="navigate('sanidad')"      id="nav-sanidad"      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-green-100 hover:bg-[#2d5a32] transition-colors text-left">🩺 Registro Sanitario</button>
+      <button onclick="navigate('reproduccion')" id="nav-reproduccion" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-green-100 hover:bg-[#2d5a32] transition-colors text-left">🔬 Reproducción</button>
+      <button onclick="navigate('alertas')"      id="nav-alertas"      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-green-100 hover:bg-[#2d5a32] transition-colors text-left">
+        🔔 Alertas <span id="alertas-badge" class="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 hidden">0</span>
+      </button>
+      <button onclick="navigate('movimientos')"  id="nav-movimientos"  class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-green-100 hover:bg-[#2d5a32] transition-colors text-left">🚛 Movimientos</button>
+      <button onclick="navigate('pesajes')"      id="nav-pesajes"      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-green-100 hover:bg-[#2d5a32] transition-colors text-left">⚖️ Pesajes</button>
+    </nav>
+    <div class="p-4 border-t border-[#2d5a32]">
+      <p class="text-xs text-green-400">Finca El Porvenir</p>
+      <p class="text-xs text-green-600">Santa Cruz, Bolivia</p>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div>
+        <h2 class="font-semibold text-gray-800" id="page-title">Dashboard</h2>
+        <p class="text-xs text-gray-400" id="page-subtitle">Resumen del sistema</p>
+      </div>
+      <button onclick="navigate('nuevo-animal')" class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">+ Nuevo Animal</button>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-6">
+
+      <!-- ===== DASHBOARD ===== -->
+      <div id="page-dashboard" class="page active">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+          <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><p class="text-xs text-gray-500 mb-1">Total Animales</p><p class="text-3xl font-bold text-gray-800" id="stat-total">0</p></div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><p class="text-xs text-gray-500 mb-1">Activos</p><p class="text-3xl font-bold text-green-600" id="stat-activos">0</p></div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><p class="text-xs text-gray-500 mb-1">Alertas Pendientes</p><p class="text-3xl font-bold text-red-500" id="stat-alertas">0</p></div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><p class="text-xs text-gray-500 mb-1">Peso Promedio</p><p class="text-3xl font-bold text-blue-600" id="stat-peso">- kg</p></div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-5">
+          <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><p class="text-xs text-gray-500 mb-1">Eventos Sanitarios</p><p class="text-2xl font-bold text-purple-600" id="stat-eventos">0</p></div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><p class="text-xs text-gray-500 mb-1">Movimientos</p><p class="text-2xl font-bold text-orange-600" id="stat-movimientos">0</p></div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><p class="text-xs text-gray-500 mb-1">Eventos Reproductivos</p><p class="text-2xl font-bold text-pink-600" id="stat-repro">0</p></div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-800 text-sm">Animales Recientes</h3>
+            <button onclick="navigate('ganado')" class="text-xs text-green-600 hover:underline">Ver todos →</button>
+          </div>
+          <div id="recent-animales"></div>
+        </div>
+      </div>
+
+      <!-- ===== GANADO ===== -->
+      <div id="page-ganado" class="page">
+        <div class="flex gap-3 mb-4 flex-wrap">
+          <input type="text" id="search-ganado" placeholder="Buscar por nombre, ID, arete o raza..." oninput="filterGanado()"
+            class="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-green-500">
+          <select id="filter-estado-ganado" onchange="filterGanado()" class="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Todos los estados</option>
+            <option>Activo</option><option>Vendido</option><option>Trasladado</option><option>Faenado</option><option>Fallecido</option>
+          </select>
+          <select id="filter-cat-ganado" onchange="filterGanado()" class="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Todas las categorías</option>
+            <option>Ternero</option><option>Ternera</option><option>Vaquilla/Novilla</option>
+            <option>Vaca</option><option>Torete</option><option>Toro</option><option>Novillo</option><option>Buey</option>
+          </select>
+        </div>
+        <div id="ganado-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- ===== FICHA INDIVIDUAL ===== -->
+      <div id="page-detalle" class="page">
+        <button onclick="navigate('ganado')" class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">← Volver al ganado</button>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <div class="text-center mb-4">
+              <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl mx-auto mb-2" id="detalle-icono">🐄</div>
+              <h3 class="font-bold text-xl text-gray-800" id="detalle-nombre">-</h3>
+              <p class="text-sm text-gray-400" id="detalle-id-sub">-</p>
+              <span id="detalle-badge" class="text-xs px-2 py-1 rounded-full mt-1 inline-block">-</span>
+            </div>
+            <div id="animal-qr" class="flex justify-center mb-2"></div>
+            <p class="text-xs text-center text-gray-400 mb-4">Código QR del animal</p>
+            <div id="detalle-info" class="space-y-0 text-sm border-t border-gray-100 pt-3"></div>
+            <button onclick="editarAnimal(currentAnimalId)" class="mt-4 w-full border border-green-600 text-green-600 px-3 py-2 rounded-lg text-xs hover:bg-green-50 transition-colors">✏️ Editar Animal</button>
+          </div>
+          <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div class="flex border-b border-gray-100 overflow-x-auto">
+              <button class="tab-btn active flex-shrink-0 px-3 py-3 text-sm text-gray-500 hover:text-green-600" onclick="showTab('sanitario')">🩺 Sanitario</button>
+              <button class="tab-btn flex-shrink-0 px-3 py-3 text-sm text-gray-500 hover:text-green-600" onclick="showTab('repro-tab')">🔬 Reproductivo</button>
+              <button class="tab-btn flex-shrink-0 px-3 py-3 text-sm text-gray-500 hover:text-green-600" onclick="showTab('mov-tab')">🚛 Movimientos</button>
+              <button class="tab-btn flex-shrink-0 px-3 py-3 text-sm text-gray-500 hover:text-green-600" onclick="showTab('pes-tab')">⚖️ Pesajes</button>
+            </div>
+            <div id="tab-sanitario" class="tab-content active p-4">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="text-sm font-semibold text-gray-700">Historial Sanitario</h4>
+                <button onclick="navigate('nuevo-evento')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">+ Agregar</button>
+              </div>
+              <div id="tab-eventos-list" class="space-y-2"></div>
+            </div>
+            <div id="tab-repro-tab" class="tab-content p-4">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="text-sm font-semibold text-gray-700">Historial Reproductivo</h4>
+                <button onclick="navigate('nuevo-repro')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">+ Agregar</button>
+              </div>
+              <div id="tab-repro-list" class="space-y-2"></div>
+            </div>
+            <div id="tab-mov-tab" class="tab-content p-4">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="text-sm font-semibold text-gray-700">Movimientos</h4>
+                <button onclick="navigate('nuevo-movimiento')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">+ Agregar</button>
+              </div>
+              <div id="tab-mov-list" class="space-y-2"></div>
+            </div>
+            <div id="tab-pes-tab" class="tab-content p-4">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="text-sm font-semibold text-gray-700">Evolución de Peso</h4>
+                <button onclick="navigate('nuevo-pesaje')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">+ Agregar</button>
+              </div>
+              <canvas id="peso-chart" style="max-height:200px;display:none;" class="mb-4"></canvas>
+              <div id="tab-pes-list" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== FORM ANIMAL ===== -->
+      <div id="page-nuevo-animal" class="page">
+        <button onclick="navigate('ganado')" class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">← Cancelar</button>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 max-w-2xl">
+          <h3 class="font-semibold text-gray-800 mb-1" id="form-animal-title">Nuevo Animal</h3>
+          <p class="text-xs text-gray-400 mb-5">Los campos con * son obligatorios</p>
+          <form id="form-animal" onsubmit="guardarAnimal(event)" class="grid grid-cols-2 gap-4">
+            <input type="hidden" id="edit-animal-id">
+            <div class="col-span-2">
+              <label class="block text-xs text-gray-600 mb-1">ID del Animal (asignado automáticamente)</label>
+              <div class="flex items-center gap-3">
+                <input type="text" id="f-id" readonly class="border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm font-mono font-bold text-green-700 w-32 cursor-not-allowed">
+                <span class="text-xs text-gray-400">Código único e irrepetible, generado automáticamente en orden</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Nombre del animal (opcional)</label>
+              <input type="text" id="f-nombre" placeholder="Ej: Margarita, Trueno"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">N° de Arete *</label>
+              <input type="text" id="f-arete" required placeholder="Ej: AR-007"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Categoría *</label>
+              <select id="f-categoria" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Seleccione una categoría</option>
+                <option>Ternero</option><option>Ternera</option><option>Vaquilla/Novilla</option>
+                <option>Vaca</option><option>Torete</option><option>Toro</option><option>Novillo</option><option>Buey</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Sexo *</label>
+              <select id="f-sexo" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Seleccione el sexo</option>
+                <option>Macho</option><option>Hembra</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Raza *</label>
+              <select id="f-raza" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Seleccionar raza</option>
+                <option>Nelore</option><option>Brahman</option><option>Angus</option><option>Hereford</option>
+                <option>Simmental</option><option>Gyr</option><option>Holstein</option><option>Mestizo</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Fecha de nacimiento o ingreso *</label>
+              <input type="date" id="f-nacimiento" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Peso inicial (kg)</label>
+              <input type="number" id="f-peso" step="0.1" placeholder="180"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Estado del animal *</label>
+              <select id="f-estado" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Seleccione el estado</option>
+                <option>Activo</option><option>Vendido</option><option>Trasladado</option><option>Faenado</option><option>Fallecido</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Etapa productiva</label>
+              <select id="f-etapa" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Seleccionar etapa</option>
+                <option>Cría</option><option>Recría</option><option>Engorde</option><option>Reproducción</option>
+                <option>Lactancia</option><option>Gestante</option><option>Vacía/No gestante</option><option>Descarte</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Propietario</label>
+              <input type="text" id="f-propietario" placeholder="Juan Pérez"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Finca</label>
+              <input type="text" id="f-finca" placeholder="El Porvenir"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Ubicación</label>
+              <input type="text" id="f-ubicacion" placeholder="Santa Cruz"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div class="col-span-2 flex gap-3 pt-2">
+              <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors">Guardar Animal</button>
+              <button type="button" onclick="navigate('ganado')" class="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ===== SANIDAD GLOBAL ===== -->
+      <div id="page-sanidad" class="page">
+        <div class="flex gap-3 mb-4 flex-wrap items-center">
+          <select id="filter-tipo-evento" onchange="renderSanidad()" class="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Todos los tipos</option>
+            <option>Vacuna</option><option>Desparasitación</option><option>Tratamiento</option>
+            <option>Control veterinario</option><option>Enfermedad</option><option>Cirugía</option>
+          </select>
+          <button onclick="navigate('nuevo-evento')" class="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700 ml-auto">+ Nuevo Evento</button>
+        </div>
+        <div id="sanidad-list" class="space-y-3"></div>
+      </div>
+
+      <!-- ===== FORM EVENTO SANITARIO ===== -->
+      <div id="page-nuevo-evento" class="page">
+        <button onclick="navigate('sanidad')" class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">← Cancelar</button>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 max-w-2xl">
+          <h3 class="font-semibold text-gray-800 mb-5">Nuevo Evento Sanitario</h3>
+          <form id="form-evento" onsubmit="guardarEvento(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Animal *</label>
+              <select id="fe-animal" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Fecha *</label>
+                <input type="date" id="fe-fecha" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Tipo de Evento *</label>
+                <select id="fe-tipo" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Seleccionar...</option>
+                  <option>Vacuna</option><option>Desparasitación</option><option>Tratamiento</option>
+                  <option>Control veterinario</option><option>Enfermedad</option><option>Cirugía</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Producto / Medicamento</label>
+                <input type="text" id="fe-producto" placeholder="Ej: Ivermectina, Aftovax"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Dosis</label>
+                <input type="text" id="fe-dosis" placeholder="Ej: 5 ml, 2 comprimidos"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Descripción *</label>
+              <input type="text" id="fe-descripcion" required placeholder="Ej: Fiebre aftosa - vacunación anual"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Responsable</label>
+                <input type="text" id="fe-responsable" placeholder="Dr. Carlos Ríos"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Próxima fecha de control</label>
+                <input type="date" id="fe-proxima" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Observaciones</label>
+              <textarea id="fe-observaciones" placeholder="Sin reacciones adversas, seguimiento en 7 días..." rows="2"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium">Guardar</button>
+              <button type="button" onclick="navigate('sanidad')" class="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ===== REPRODUCCIÓN ===== -->
+      <div id="page-reproduccion" class="page">
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm mb-5">
+          <div class="p-4 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-800 text-sm">Etapas Productivas</h3>
+            <p class="text-xs text-gray-400">Distribución del hato por etapa productiva</p>
+          </div>
+          <div id="etapas-grid" class="grid grid-cols-5 divide-x divide-gray-100 border-b border-gray-100"></div>
+          <div id="etapas-grid2" class="grid grid-cols-5 divide-x divide-gray-100"></div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-800 text-sm">Eventos Reproductivos</h3>
+            <button onclick="navigate('nuevo-repro')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">+ Registrar</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-gray-100 text-left">
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500">Fecha</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500">Animal</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500">Tipo</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500">Detalle</th>
+                <th class="px-4 py-3 text-xs font-semibold text-gray-500">Responsable</th>
+              </tr></thead>
+              <tbody id="repro-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== FORM REPRODUCTIVO ===== -->
+      <div id="page-nuevo-repro" class="page">
+        <button onclick="navigate('reproduccion')" class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">← Cancelar</button>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 max-w-xl">
+          <h3 class="font-semibold text-gray-800 mb-5">Nuevo Evento Reproductivo</h3>
+          <form id="form-repro" onsubmit="guardarRepro(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Animal *</label>
+              <select id="fr-animal" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Fecha *</label>
+                <input type="date" id="fr-fecha" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Tipo *</label>
+                <select id="fr-tipo" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Seleccionar...</option>
+                  <option>Inseminación</option><option>Monta natural</option><option>Preñez confirmada</option>
+                  <option>Parto</option><option>Aborto</option><option>Destete</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Detalle *</label>
+              <input type="text" id="fr-detalle" required placeholder="Ej: Semen toro Brahman importado, Eco 40 días positivo"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Responsable</label>
+                <input type="text" id="fr-responsable" placeholder="Dr. Ana López"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Observaciones</label>
+                <input type="text" id="fr-obs" placeholder="Opcional"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium">Guardar</button>
+              <button type="button" onclick="navigate('reproduccion')" class="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ===== ALERTAS ===== -->
+      <div id="page-alertas" class="page">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="renderAlertas('')"         class="alerta-filter-btn text-xs px-3 py-1.5 rounded-lg bg-gray-800 text-white">Todas</button>
+            <button onclick="renderAlertas('Alta')"     class="alerta-filter-btn text-xs px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600">Alta prioridad</button>
+            <button onclick="renderAlertas('Media')"    class="alerta-filter-btn text-xs px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600">Media prioridad</button>
+            <button onclick="renderAlertas('pendiente')" class="alerta-filter-btn text-xs px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600">Pendientes</button>
+          </div>
+          <button onclick="navigate('nueva-alerta')" class="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700">+ Nueva Alerta</button>
+        </div>
+        <div id="alertas-list" class="space-y-3"></div>
+      </div>
+
+      <!-- ===== FORM ALERTA ===== -->
+      <div id="page-nueva-alerta" class="page">
+        <button onclick="navigate('alertas')" class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">← Cancelar</button>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 max-w-xl">
+          <h3 class="font-semibold text-gray-800 mb-5">Nueva Alerta</h3>
+          <form id="form-alerta" onsubmit="guardarAlerta(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Título *</label>
+              <input type="text" id="fa-titulo" required placeholder="Ej: Vacunación pendiente"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Descripción *</label>
+              <textarea id="fa-desc" required rows="2" placeholder="Descripción de la alerta..."
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Animal (opcional)</label>
+                <select id="fa-animal" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Sin animal específico</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Prioridad *</label>
+                <select id="fa-prioridad" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option>Alta</option><option selected>Media</option><option>Baja</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Fecha *</label>
+              <input type="date" id="fa-fecha" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium">Guardar</button>
+              <button type="button" onclick="navigate('alertas')" class="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ===== MOVIMIENTOS ===== -->
+      <div id="page-movimientos" class="page">
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-800 text-sm">Todos los Movimientos</h3>
+            <button onclick="navigate('nuevo-movimiento')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">+ Agregar</button>
+          </div>
+          <div id="movimientos-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== FORM MOVIMIENTO ===== -->
+      <div id="page-nuevo-movimiento" class="page">
+        <button onclick="navigate('movimientos')" class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">← Cancelar</button>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 max-w-xl">
+          <h3 class="font-semibold text-gray-800 mb-5">Nuevo Movimiento</h3>
+          <form id="form-movimiento" onsubmit="guardarMovimiento(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Animal *</label>
+              <select id="fm-animal" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><label class="block text-xs text-gray-600 mb-1">Fecha *</label>
+                <input type="date" id="fm-fecha" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs text-gray-600 mb-1">Motivo *</label>
+                <select id="fm-motivo" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Seleccionar...</option>
+                  <option>Venta</option><option>Traslado</option><option>Rotación de pasturas</option><option>Faena</option><option>Préstamo</option>
+                </select></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><label class="block text-xs text-gray-600 mb-1">Origen *</label>
+                <input type="text" id="fm-origen" required placeholder="Potrero A" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs text-gray-600 mb-1">Destino *</label>
+                <input type="text" id="fm-destino" required placeholder="Potrero B" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+            </div>
+            <div><label class="block text-xs text-gray-600 mb-1">Responsable</label>
+              <input type="text" id="fm-responsable" placeholder="Juan Pérez" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium">Guardar</button>
+              <button type="button" onclick="navigate('movimientos')" class="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ===== PESAJES ===== -->
+      <div id="page-pesajes" class="page">
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-800 text-sm">Todos los Pesajes</h3>
+            <button onclick="navigate('nuevo-pesaje')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">+ Agregar</button>
+          </div>
+          <div id="pesajes-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== FORM PESAJE ===== -->
+      <div id="page-nuevo-pesaje" class="page">
+        <button onclick="navigate('pesajes')" class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">← Cancelar</button>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 max-w-xl">
+          <h3 class="font-semibold text-gray-800 mb-5">Nuevo Pesaje</h3>
+          <form id="form-pesaje" onsubmit="guardarPesaje(event)" class="space-y-4">
+            <div><label class="block text-xs text-gray-600 mb-1">Animal *</label>
+              <select id="fp-animal" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></select></div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><label class="block text-xs text-gray-600 mb-1">Fecha *</label>
+                <input type="date" id="fp-fecha" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs text-gray-600 mb-1">Peso (kg) *</label>
+                <input type="number" id="fp-peso" required step="0.1" placeholder="230" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><label class="block text-xs text-gray-600 mb-1">Responsable</label>
+                <input type="text" id="fp-responsable" placeholder="Juan Pérez" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs text-gray-600 mb-1">Observaciones</label>
+                <input type="text" id="fp-obs" placeholder="Ganancia normal" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium">Guardar</button>
+              <button type="button" onclick="navigate('pesajes')" class="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATOS INICIALES
+// ============================================================
+const MOCK = {
+  animales: [
+    {id:'BVX-001',nombre:'Margarita',arete:'AR-001',categoria:'Vaca',         raza:'Nelore',  sexo:'Hembra',nacimiento:'2020-03-15',peso:280,etapa:'Gestante',        propietario:'Juan Pérez',finca:'El Porvenir',ubicacion:'Santa Cruz',estado:'Activo',  ingreso:'2022-01-01'},
+    {id:'BVX-002',nombre:'Trueno',   arete:'AR-002',categoria:'Toro',         raza:'Brahman', sexo:'Macho', nacimiento:'2019-07-22',peso:480,etapa:'Reproducción',    propietario:'Juan Pérez',finca:'El Porvenir',ubicacion:'Santa Cruz',estado:'Activo',  ingreso:'2021-06-10'},
+    {id:'BVX-003',nombre:'Bella',    arete:'AR-003',categoria:'Vaquilla/Novilla',raza:'Angus',sexo:'Hembra',nacimiento:'2023-01-10',peso:195,etapa:'Recría',          propietario:'Juan Pérez',finca:'El Porvenir',ubicacion:'Santa Cruz',estado:'Activo',  ingreso:'2023-01-15'},
+    {id:'BVX-004',nombre:'Estrella', arete:'AR-004',categoria:'Vaca',         raza:'Gyr',     sexo:'Hembra',nacimiento:'2021-11-05',peso:310,etapa:'Lactancia',       propietario:'Juan Pérez',finca:'El Porvenir',ubicacion:'Santa Cruz',estado:'Activo',  ingreso:'2023-02-10'},
+    {id:'BVX-005',nombre:'Relámpago',arete:'AR-005',categoria:'Torete',       raza:'Mestizo', sexo:'Macho', nacimiento:'2022-04-18',peso:260,etapa:'Engorde',         propietario:'Juan Pérez',finca:'El Porvenir',ubicacion:'Santa Cruz',estado:'Activo',  ingreso:'2023-03-01'},
+    {id:'BVX-006',nombre:'Luna',     arete:'AR-006',categoria:'Ternera',      raza:'Nelore',  sexo:'Hembra',nacimiento:'2025-02-10',peso:85, etapa:'Cría',           propietario:'Juan Pérez',finca:'El Porvenir',ubicacion:'Santa Cruz',estado:'Activo',  ingreso:'2025-02-10'},
+  ],
+  eventos: [
+    {id:'EVT-001',idAnimal:'BVX-001',fecha:'2024-01-10',tipo:'Vacuna',            producto:'Aftovax Plus',dosis:'5 ml',  descripcion:'Fiebre aftosa - vacunación anual',         responsable:'Dr. Carlos Ríos',proximaFecha:'2025-01-10',observaciones:'Sin reacciones adversas'},
+    {id:'EVT-002',idAnimal:'BVX-001',fecha:'2024-03-15',tipo:'Desparasitación',   producto:'Ivermectina', dosis:'10 ml', descripcion:'Desparasitación trimestral',                responsable:'Dr. Carlos Ríos',proximaFecha:'2024-06-15',observaciones:'Aplicación subcutánea'},
+    {id:'EVT-003',idAnimal:'BVX-002',fecha:'2026-05-09',tipo:'Tratamiento',       producto:'Amoxicilina', dosis:'20 ml/día',descripcion:'Antibiótico por infección respiratoria',responsable:'Dr. Martínez',   proximaFecha:'2026-05-16',observaciones:'Revisión en 7 días'},
+    {id:'EVT-004',idAnimal:'BVX-003',fecha:'2026-05-07',tipo:'Vacuna',            producto:'Aftovax',     dosis:'5 ml',  descripcion:'Fiebre Aftosa',                             responsable:'Dr. Gómez',      proximaFecha:'2027-05-07',observaciones:''},
+    {id:'EVT-005',idAnimal:'BVX-004',fecha:'2026-05-04',tipo:'Desparasitación',   producto:'Ivermectina', dosis:'8 ml',  descripcion:'Desparasitación preventiva',                responsable:'Personal campo',  proximaFecha:'2026-08-04',observaciones:''},
+    {id:'EVT-006',idAnimal:'BVX-005',fecha:'2026-05-02',tipo:'Control veterinario',producto:'',           dosis:'',      descripcion:'Revisión general de rutina',                responsable:'Dr. Martínez',   proximaFecha:'2026-08-02',observaciones:'Animal en buen estado'},
+  ],
+  movimientos: [
+    {id:'MOV-001',idAnimal:'BVX-002',fecha:'2024-02-20',origen:'Potrero A',        destino:'Potrero C',         motivo:'Rotación de pasturas',responsable:'Juan Pérez'},
+    {id:'MOV-002',idAnimal:'BVX-001',fecha:'2024-05-15',origen:'Finca El Porvenir',destino:'Finca Los Ceibos',  motivo:'Traslado',            responsable:'Juan Pérez'},
+    {id:'MOV-003',idAnimal:'BVX-005',fecha:'2025-03-01',origen:'Potrero B',        destino:'Potrero Engorde',   motivo:'Rotación de pasturas',responsable:'Juan Pérez'},
+  ],
+  pesajes: [
+    {id:'PES-001',idAnimal:'BVX-001',fecha:'2022-01-01',peso:220,responsable:'Juan Pérez',observaciones:'Peso de ingreso'},
+    {id:'PES-002',idAnimal:'BVX-001',fecha:'2023-06-01',peso:255,responsable:'Juan Pérez',observaciones:''},
+    {id:'PES-003',idAnimal:'BVX-001',fecha:'2024-01-01',peso:280,responsable:'Juan Pérez',observaciones:'Post parto'},
+    {id:'PES-004',idAnimal:'BVX-002',fecha:'2021-06-10',peso:380,responsable:'Juan Pérez',observaciones:'Ingreso'},
+    {id:'PES-005',idAnimal:'BVX-002',fecha:'2024-06-01',peso:480,responsable:'Juan Pérez',observaciones:''},
+    {id:'PES-006',idAnimal:'BVX-004',fecha:'2026-04-11',peso:325,responsable:'Juan Pérez',observaciones:''},
+    {id:'PES-007',idAnimal:'BVX-004',fecha:'2026-05-11',peso:310,responsable:'Juan Pérez',observaciones:'Bajó 15 kg - evaluar'},
+  ],
+  reproduccion: [
+    {id:'REP-001',idAnimal:'BVX-001',fecha:'2025-11-10',tipo:'Inseminación',      detalle:'Semen toro Brahman importado',           responsable:'Dr. Ana López',  observaciones:''},
+    {id:'REP-002',idAnimal:'BVX-001',fecha:'2025-12-20',tipo:'Preñez confirmada', detalle:'Eco a 40 días positivo',                 responsable:'Dr. Ana López',  observaciones:'Parto esperado: sep 2026'},
+    {id:'REP-003',idAnimal:'BVX-004',fecha:'2025-10-05',tipo:'Parto',             detalle:'Nacimiento ternera Luna (BVX-006)',       responsable:'Dr. Carlos Ríos',observaciones:'Sin complicaciones'},
+    {id:'REP-004',idAnimal:'BVX-003',fecha:'2026-03-15',tipo:'Monta natural',     detalle:'Con toro BVX-002 Trueno',                responsable:'Juan Pérez',     observaciones:''},
+  ],
+  alertas: [
+    {id:'ALT-001',titulo:'Animal en tratamiento requiere seguimiento',descripcion:'Trueno está en tratamiento antibiótico. Próxima revisión programada para el 16/05.',   idAnimal:'BVX-002',fecha:'2026-05-12',prioridad:'Alta', resuelta:false},
+    {id:'ALT-002',titulo:'Vacunación pendiente',                      descripcion:'La vaquilla Bella requiere vacunación de refuerzo contra Fiebre Aftosa.',               idAnimal:'BVX-003',fecha:'2026-06-14',prioridad:'Alta', resuelta:false},
+    {id:'ALT-003',titulo:'Pérdida de peso detectada',                 descripcion:'Estrella perdió 15 kg en el último mes. Se recomienda evaluación veterinaria urgente.', idAnimal:'BVX-004',fecha:'2026-05-11',prioridad:'Media',resuelta:false},
+    {id:'ALT-004',titulo:'Revisión programada próximamente',          descripcion:'Control rutinario de Relámpago programado para la próxima semana.',                     idAnimal:'BVX-005',fecha:'2026-06-22',prioridad:'Media',resuelta:false},
+    {id:'ALT-005',titulo:'Primera vacuna de Luna pendiente',          descripcion:'La ternera Luna ya tiene edad para recibir su primera vacunación contra aftosa.',       idAnimal:'BVX-006',fecha:'2026-06-20',prioridad:'Baja', resuelta:false},
+  ]
+};
+
+// ============================================================
+// ESTADO
+// ============================================================
+let D = {};
+let currentAnimalId = null;
+let pesoChart = null;
+let alertaFiltro = '';
+
+function initData() {
+  const s = localStorage.getItem('bovix_v3');
+  D = s ? JSON.parse(s) : JSON.parse(JSON.stringify(MOCK));
+  if (!s) save();
+}
+function save() { localStorage.setItem('bovix_v3', JSON.stringify(D)); }
+
+function nextId() {
+  if (!D.animales.length) return 'BVX-001';
+  const nums = D.animales.map(a=>{ const m=a.id.match(/BVX-(\d+)/); return m?parseInt(m[1]):0; });
+  return 'BVX-' + String(Math.max(...nums)+1).padStart(3,'0');
+}
+function aLabel(id) {
+  const a = D.animales.find(x=>x.id===id);
+  return a ? (a.nombre ? `${a.nombre} (${a.id})` : a.id) : id;
+}
+
+// ============================================================
+// NAVEGACIÓN
+// ============================================================
+const META = {
+  'dashboard':        ['Dashboard',               'Resumen del sistema'],
+  'ganado':           ['Ganado',                  'Lista completa de animales'],
+  'detalle':          ['Ficha del Animal',         'Información y trazabilidad'],
+  'nuevo-animal':     ['Nuevo Animal',             'Registrar un animal'],
+  'sanidad':          ['Registro Sanitario',       'Historial sanitario del hato'],
+  'nuevo-evento':     ['Nuevo Evento Sanitario',   'Registrar evento'],
+  'reproduccion':     ['Reproducción',             'Eventos y etapas reproductivas'],
+  'nuevo-repro':      ['Nuevo Evento Reproductivo','Registrar evento reproductivo'],
+  'alertas':          ['Alertas',                  'Notificaciones y acciones pendientes'],
+  'nueva-alerta':     ['Nueva Alerta',             'Crear alerta'],
+  'movimientos':      ['Movimientos',              'Todos los movimientos'],
+  'nuevo-movimiento': ['Nuevo Movimiento',         'Registrar movimiento'],
+  'pesajes':          ['Pesajes',                  'Registro de pesajes'],
+  'nuevo-pesaje':     ['Nuevo Pesaje',             'Registrar pesaje'],
+};
+const NAVMAP = {
+  'dashboard':'nav-dashboard','ganado':'nav-ganado','detalle':'nav-ganado','nuevo-animal':'nav-ganado',
+  'sanidad':'nav-sanidad','nuevo-evento':'nav-sanidad','reproduccion':'nav-reproduccion','nuevo-repro':'nav-reproduccion',
+  'alertas':'nav-alertas','nueva-alerta':'nav-alertas','movimientos':'nav-movimientos','nuevo-movimiento':'nav-movimientos',
+  'pesajes':'nav-pesajes','nuevo-pesaje':'nav-pesajes',
+};
+
+function navigate(page, id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const [t,s] = META[page]||[page,''];
+  document.getElementById('page-title').textContent = t;
+  document.getElementById('page-subtitle').textContent = s;
+  const nav = document.getElementById(NAVMAP[page]);
+  if (nav) nav.classList.add('active');
+  document.getElementById('page-'+page)?.classList.add('active');
+  updateBadge();
+  if (page==='dashboard')        renderDashboard();
+  else if (page==='ganado')      renderGanado();
+  else if (page==='detalle')     { if(id) currentAnimalId=id; renderDetalle(currentAnimalId); }
+  else if (page==='nuevo-animal'){ if(id) currentAnimalId=id; prepareAnimal(id||null); }
+  else if (page==='sanidad')     renderSanidad();
+  else if (page==='nuevo-evento') prepareEvento();
+  else if (page==='reproduccion') renderRepro();
+  else if (page==='nuevo-repro')  prepareRepro();
+  else if (page==='alertas')      renderAlertas();
+  else if (page==='nueva-alerta') prepareAlerta();
+  else if (page==='movimientos')  renderMovimientos();
+  else if (page==='nuevo-movimiento') prepareMovimiento();
+  else if (page==='pesajes')      renderPesajes();
+  else if (page==='nuevo-pesaje') preparePesaje();
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const activos = D.animales.filter(a=>a.estado==='Activo');
+  const pend    = D.alertas.filter(a=>!a.resuelta).length;
+  const pesos   = activos.map(a=>Number(a.peso)).filter(Boolean);
+  const prom    = pesos.length ? Math.round(pesos.reduce((s,p)=>s+p,0)/pesos.length) : 0;
+  document.getElementById('stat-total').textContent     = D.animales.length;
+  document.getElementById('stat-activos').textContent   = activos.length;
+  document.getElementById('stat-alertas').textContent   = pend;
+  document.getElementById('stat-peso').textContent      = prom+' kg';
+  document.getElementById('stat-eventos').textContent   = D.eventos.length;
+  document.getElementById('stat-movimientos').textContent = D.movimientos.length;
+  document.getElementById('stat-repro').textContent     = D.reproduccion.length;
+  document.getElementById('recent-animales').innerHTML  = D.animales.slice().reverse().slice(0,6).map(a=>`
+    <div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0" onclick="navigate('detalle','${a.id}')">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700 text-sm">${a.sexo==='Macho'?'♂':'♀'}</div>
+        <div>
+          <p class="text-sm font-semibold text-gray-800">${a.nombre||a.id} <span class="text-xs text-gray-400 font-normal">${a.nombre?'('+a.id+')':''}</span></p>
+          <p class="text-xs text-gray-400">${a.categoria} · ${a.raza}</p>
+        </div>
+      </div>
+      <div class="text-right">
+        <span class="text-xs px-2 py-1 rounded-full ${bc(a.estado)}">${a.estado}</span>
+        <p class="text-xs text-gray-400 mt-1">${a.peso} kg</p>
+      </div>
+    </div>`).join('');
+}
+
+// ============================================================
+// GANADO
+// ============================================================
+function renderGanado() { filterGanado(); }
+function filterGanado() {
+  const q  = (document.getElementById('search-ganado')?.value||'').toLowerCase();
+  const es = document.getElementById('filter-estado-ganado')?.value||'';
+  const ca = document.getElementById('filter-cat-ganado')?.value||'';
+  const lista = D.animales.filter(a=>
+    (!q  || a.id.toLowerCase().includes(q)||(a.nombre||'').toLowerCase().includes(q)||a.raza.toLowerCase().includes(q)||a.arete.toLowerCase().includes(q))&&
+    (!es || a.estado===es)&&(!ca||a.categoria===ca));
+  document.getElementById('ganado-grid').innerHTML = lista.length ? lista.map(a=>`
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="navigate('detalle','${a.id}')">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-3xl">${a.sexo==='Macho'?'🐂':'🐄'}</span>
+        <span class="text-xs px-2 py-1 rounded-full ${bc(a.estado)}">${a.estado}</span>
+      </div>
+      <h3 class="font-bold text-gray-800">${a.nombre||a.id}</h3>
+      <p class="text-xs text-gray-400">${a.nombre?a.id+' · ':''} ${a.arete}</p>
+      <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full mt-1 inline-block">${a.categoria}</span>
+      <div class="grid grid-cols-2 gap-1 text-xs text-gray-500 mt-3">
+        <span>🐄 ${a.raza}</span><span>⚖️ ${a.peso} kg</span>
+        <span>📍 ${a.finca}</span><span>🌱 ${a.etapa||'-'}</span>
+      </div>
+    </div>`).join('')
+  :'<p class="text-sm text-gray-400 col-span-3 text-center py-12">No se encontraron animales.</p>';
+}
+
+// ============================================================
+// FICHA
+// ============================================================
+function renderDetalle(id) {
+  const a = D.animales.find(x=>x.id===id); if(!a) return;
+  document.getElementById('detalle-icono').textContent = a.sexo==='Macho'?'🐂':'🐄';
+  document.getElementById('detalle-nombre').textContent = a.nombre||a.id;
+  document.getElementById('detalle-id-sub').textContent = a.nombre?`${a.id} · ${a.arete}`:a.arete;
+  document.getElementById('detalle-badge').textContent = a.estado;
+  document.getElementById('detalle-badge').className = `text-xs px-2 py-1 rounded-full mt-1 inline-block ${bc(a.estado)}`;
+  document.getElementById('detalle-info').innerHTML = [
+    ['Categoría',a.categoria],['Raza',a.raza],['Sexo',a.sexo],
+    ['Nacimiento',fmt(a.nacimiento)],['Peso inicial',a.peso+' kg'],
+    ['Etapa',a.etapa||'-'],['Propietario',a.propietario],
+    ['Finca',a.finca],['Ubicación',a.ubicacion],['Ingreso',fmt(a.ingreso)],
+  ].map(([k,v])=>`<div class="flex justify-between py-1.5 border-b border-gray-50"><span class="text-gray-400 text-xs">${k}</span><span class="font-medium text-gray-700 text-xs text-right">${v||'-'}</span></div>`).join('');
+  const qrDiv = document.getElementById('animal-qr'); qrDiv.innerHTML='';
+  new QRCode(qrDiv,{text:`BOVIX:${a.id}:${a.nombre||''}:${a.arete}`,width:120,height:120,colorDark:'#166534'});
+  showTab('sanitario');
+  renderTabEvt(id); renderTabRepro(id); renderTabMov(id); renderTabPes(id);
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+tab)?.classList.add('active');
+  const idx = {sanitario:0,'repro-tab':1,'mov-tab':2,'pes-tab':3}[tab]??0;
+  document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');
+}
+
+function renderTabEvt(id) {
+  const list = D.eventos.filter(e=>e.idAnimal===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.getElementById('tab-eventos-list').innerHTML = list.length ? list.map(e=>`
+    <div class="border border-gray-100 rounded-lg p-3 mb-2">
+      <div class="flex items-center justify-between mb-1">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full flex items-center justify-center text-sm ${eIconBg(e.tipo)}">${eIcon(e.tipo)}</span>
+          <span class="text-xs font-semibold ${eColor(e.tipo)} px-2 py-0.5 rounded-full">${e.tipo}</span>
+        </div>
+        <span class="text-xs text-gray-400">${fmt(e.fecha)}</span>
+      </div>
+      <p class="text-sm font-medium text-gray-800">${e.descripcion}</p>
+      ${e.producto?`<p class="text-xs text-gray-500 mt-0.5">💊 ${e.producto}${e.dosis?' · '+e.dosis:''}</p>`:''}
+      ${e.responsable?`<p class="text-xs text-gray-400 mt-0.5">👤 ${e.responsable}</p>`:''}
+      ${e.proximaFecha?`<p class="text-xs text-blue-500 mt-0.5">📅 Próximo control: ${fmt(e.proximaFecha)}</p>`:''}
+      ${e.observaciones?`<p class="text-xs text-gray-400 italic mt-0.5">${e.observaciones}</p>`:''}
+    </div>`).join('')
+  :'<p class="text-xs text-gray-400 text-center py-6">Sin eventos sanitarios.</p>';
+}
+
+function renderTabRepro(id) {
+  const list = D.reproduccion.filter(r=>r.idAnimal===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.getElementById('tab-repro-list').innerHTML = list.length ? list.map(r=>`
+    <div class="border border-gray-100 rounded-lg p-3 mb-2">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-semibold bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">${r.tipo}</span>
+        <span class="text-xs text-gray-400">${fmt(r.fecha)}</span>
+      </div>
+      <p class="text-sm text-gray-700">${r.detalle}</p>
+      ${r.responsable?`<p class="text-xs text-gray-400 mt-0.5">👤 ${r.responsable}</p>`:''}
+      ${r.observaciones?`<p class="text-xs text-gray-400 italic mt-0.5">${r.observaciones}</p>`:''}
+    </div>`).join('')
+  :'<p class="text-xs text-gray-400 text-center py-6">Sin eventos reproductivos.</p>';
+}
+
+function renderTabMov(id) {
+  const list = D.movimientos.filter(m=>m.idAnimal===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.getElementById('tab-mov-list').innerHTML = list.length ? list.map(m=>`
+    <div class="border border-gray-100 rounded-lg p-3 mb-2">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">${m.motivo}</span>
+        <span class="text-xs text-gray-400">${fmt(m.fecha)}</span>
+      </div>
+      <p class="text-sm text-gray-700">📍 ${m.origen} → ${m.destino}</p>
+      ${m.responsable?`<p class="text-xs text-gray-400 mt-0.5">👤 ${m.responsable}</p>`:''}
+    </div>`).join('')
+  :'<p class="text-xs text-gray-400 text-center py-6">Sin movimientos.</p>';
+}
+
+function renderTabPes(id) {
+  const list = D.pesajes.filter(p=>p.idAnimal===id).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const canvas = document.getElementById('peso-chart');
+  if (pesoChart) { pesoChart.destroy(); pesoChart=null; }
+  if (list.length>=2) {
+    canvas.style.display='block';
+    pesoChart = new Chart(canvas,{type:'line',data:{
+      labels:list.map(p=>fmt(p.fecha)),
+      datasets:[{label:'Peso (kg)',data:list.map(p=>Number(p.peso)),borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#16a34a',pointRadius:5}]
+    },options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}});
+  } else canvas.style.display='none';
+  document.getElementById('tab-pes-list').innerHTML = list.length ? [...list].reverse().map(p=>`
+    <div class="border border-gray-100 rounded-lg p-3 mb-2 flex items-center justify-between">
+      <div><p class="text-sm font-bold text-gray-800">${p.peso} kg</p><p class="text-xs text-gray-400">${p.responsable||''}${p.observaciones?' · '+p.observaciones:''}</p></div>
+      <span class="text-xs text-gray-400">${fmt(p.fecha)}</span>
+    </div>`).join('')
+  :'<p class="text-xs text-gray-400 text-center py-6">Sin pesajes.</p>';
+}
+
+// ============================================================
+// SANIDAD GLOBAL
+// ============================================================
+function renderSanidad() {
+  const tipo = document.getElementById('filter-tipo-evento')?.value||'';
+  let list = [...D.eventos].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  if (tipo) list = list.filter(e=>e.tipo===tipo);
+  document.getElementById('sanidad-list').innerHTML = list.length ? list.map(e=>`
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="navigate('detalle','${e.idAnimal}')">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${eIconBg(e.tipo)}">${eIcon(e.tipo)}</div>
+        <div class="flex-1">
+          <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+            <div>
+              <span class="font-semibold text-gray-800 text-sm">${aLabel(e.idAnimal)}</span>
+              <span class="ml-2 text-xs ${eColor(e.tipo)} px-2 py-0.5 rounded-full">${e.tipo}</span>
+            </div>
+            <span class="text-xs text-gray-400">${fmt(e.fecha)}</span>
+          </div>
+          <p class="text-sm text-gray-700">${e.descripcion}</p>
+          ${e.producto?`<p class="text-xs text-gray-500 mt-1">💊 ${e.producto}${e.dosis?' · '+e.dosis:''}</p>`:''}
+          <div class="flex gap-4 mt-1 flex-wrap">
+            ${e.responsable?`<p class="text-xs text-gray-400">👤 ${e.responsable}</p>`:''}
+            ${e.proximaFecha?`<p class="text-xs text-blue-500">📅 Próx. control: ${fmt(e.proximaFecha)}</p>`:''}
+          </div>
+          ${e.observaciones?`<p class="text-xs text-gray-400 italic mt-1">${e.observaciones}</p>`:''}
+        </div>
+      </div>
+    </div>`).join('')
+  :'<p class="text-sm text-gray-400 text-center py-12 bg-white rounded-xl">Sin eventos registrados.</p>';
+}
+
+// ============================================================
+// REPRODUCCIÓN
+// ============================================================
+function renderRepro() {
+  const etapas1 = ['Cría','Recría','Engorde','Reproducción','Lactancia'];
+  const etapas2 = ['Gestante','Vacía/No gestante','Descarte','Vendido','Fallecido'];
+  const mkEtapa = e => { const c=D.animales.filter(a=>a.etapa===e).length; return `<div class="p-4 text-center"><p class="text-2xl font-bold text-gray-800">${c}</p><p class="text-xs text-gray-500 mt-1">${e}</p></div>`; };
+  document.getElementById('etapas-grid').innerHTML  = etapas1.map(mkEtapa).join('');
+  document.getElementById('etapas-grid2').innerHTML = etapas2.map(mkEtapa).join('');
+  const sorted = [...D.reproduccion].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.getElementById('repro-table').innerHTML = sorted.length ? sorted.map(r=>`
+    <tr class="border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onclick="navigate('detalle','${r.idAnimal}')">
+      <td class="px-4 py-3 text-xs text-gray-500">${fmt(r.fecha)}</td>
+      <td class="px-4 py-3 text-sm font-medium text-gray-800">${aLabel(r.idAnimal)}</td>
+      <td class="px-4 py-3"><span class="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full font-medium">${r.tipo}</span></td>
+      <td class="px-4 py-3 text-sm text-gray-600">${r.detalle}</td>
+      <td class="px-4 py-3 text-xs text-gray-400">${r.responsable||'-'}</td>
+    </tr>`).join('')
+  :'<tr><td colspan="5" class="text-center py-8 text-sm text-gray-400">Sin eventos reproductivos.</td></tr>';
+}
+
+// ============================================================
+// ALERTAS
+// ============================================================
+function updateBadge() {
+  const n = D.alertas.filter(a=>!a.resuelta).length;
+  const b = document.getElementById('alertas-badge');
+  if (n>0){b.textContent=n;b.classList.remove('hidden');}else b.classList.add('hidden');
+}
+
+function renderAlertas(filtro) {
+  if (filtro!==undefined) alertaFiltro=filtro;
+  let list = [...D.alertas].sort((a,b)=>{
+    if (a.resuelta!==b.resuelta) return a.resuelta?1:-1;
+    return ({Alta:0,Media:1,Baja:2}[a.prioridad]||9)-({Alta:0,Media:1,Baja:2}[b.prioridad]||9);
+  });
+  if (alertaFiltro==='Alta')      list=list.filter(a=>a.prioridad==='Alta');
+  else if (alertaFiltro==='Media') list=list.filter(a=>a.prioridad==='Media');
+  else if (alertaFiltro==='pendiente') list=list.filter(a=>!a.resuelta);
+  document.getElementById('alertas-list').innerHTML = list.length ? list.map(a=>`
+    <div class="rounded-xl p-4 border border-gray-100 ${a.resuelta?'bg-gray-50 opacity-60':'alerta-'+a.prioridad.toLowerCase()}">
+      <div class="flex items-start gap-3">
+        <span class="text-xl flex-shrink-0">${aIcon(a.prioridad)}</span>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <h4 class="font-semibold text-gray-800 text-sm">${a.titulo}</h4>
+            <span class="text-xs px-2 py-0.5 rounded-full ${pBadge(a.prioridad)}">${a.prioridad} Prioridad</span>
+            ${a.resuelta?'<span class="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">Resuelta</span>':''}
+          </div>
+          <p class="text-sm text-gray-600 mb-2">${a.descripcion}</p>
+          <div class="flex gap-4 text-xs text-gray-400 flex-wrap">
+            ${a.idAnimal?`<span>Animal: ${aLabel(a.idAnimal)}</span>`:''}
+            <span>Fecha: ${fmt(a.fecha)}</span>
+          </div>
+        </div>
+      </div>
+      ${!a.resuelta?`<div class="flex gap-2 mt-3">
+        ${a.idAnimal?`<button onclick="navigate('detalle','${a.idAnimal}')" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">Ver Detalles</button>`:''}
+        <button onclick="resolverAlerta('${a.id}')" class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-50">Marcar Resuelta</button>
+      </div>`:''}
+    </div>`).join('')
+  :'<p class="text-sm text-gray-400 text-center py-12 bg-white rounded-xl border border-gray-100">No hay alertas.</p>';
+}
+
+function resolverAlerta(id) {
+  const a = D.alertas.find(x=>x.id===id);
+  if (a){a.resuelta=true;save();renderAlertas();updateBadge();}
+}
+
+// ============================================================
+// FORMULARIOS
+// ============================================================
+function prepareAnimal(id) {
+  document.getElementById('form-animal').reset();
+  document.getElementById('edit-animal-id').value='';
+  document.getElementById('form-animal-title').textContent='Nuevo Animal';
+  if (id) {
+    const a=D.animales.find(x=>x.id===id); if(!a)return;
+    document.getElementById('form-animal-title').textContent='Editar Animal';
+    document.getElementById('edit-animal-id').value=a.id;
+    document.getElementById('f-id').value=a.id;
+    document.getElementById('f-nombre').value=a.nombre||'';
+    document.getElementById('f-arete').value=a.arete;
+    document.getElementById('f-categoria').value=a.categoria;
+    document.getElementById('f-sexo').value=a.sexo;
+    document.getElementById('f-raza').value=a.raza;
+    document.getElementById('f-nacimiento').value=a.nacimiento;
+    document.getElementById('f-peso').value=a.peso;
+    document.getElementById('f-etapa').value=a.etapa||'';
+    document.getElementById('f-estado').value=a.estado;
+    document.getElementById('f-propietario').value=a.propietario;
+    document.getElementById('f-finca').value=a.finca;
+    document.getElementById('f-ubicacion').value=a.ubicacion;
+  } else { document.getElementById('f-id').value=nextId(); }
+}
+
+function editarAnimal(id){navigate('nuevo-animal',id);}
+
+function guardarAnimal(e) {
+  e.preventDefault();
+  const eid=document.getElementById('edit-animal-id').value;
+  const data={
+    id:document.getElementById('f-id').value.trim(),
+    nombre:document.getElementById('f-nombre').value.trim(),
+    arete:document.getElementById('f-arete').value.trim(),
+    categoria:document.getElementById('f-categoria').value,
+    sexo:document.getElementById('f-sexo').value,
+    raza:document.getElementById('f-raza').value,
+    nacimiento:document.getElementById('f-nacimiento').value,
+    peso:Number(document.getElementById('f-peso').value)||0,
+    etapa:document.getElementById('f-etapa').value,
+    estado:document.getElementById('f-estado').value,
+    propietario:document.getElementById('f-propietario').value.trim(),
+    finca:document.getElementById('f-finca').value.trim(),
+    ubicacion:document.getElementById('f-ubicacion').value.trim(),
+    ingreso:document.getElementById('f-nacimiento').value,
+  };
+  if (eid){const i=D.animales.findIndex(a=>a.id===eid);if(i!==-1)D.animales[i]={...D.animales[i],...data};}
+  else D.animales.push(data);
+  save(); navigate('detalle',data.id);
+}
+
+function prepareEvento() {
+  document.getElementById('form-evento').reset();
+  document.getElementById('fe-animal').innerHTML=D.animales.map(a=>`<option value="${a.id}">${aLabel(a.id)} · ${a.categoria}</option>`).join('');
+  if(currentAnimalId) document.getElementById('fe-animal').value=currentAnimalId;
+  document.getElementById('fe-fecha').value=today();
+}
+function guardarEvento(e) {
+  e.preventDefault();
+  D.eventos.push({id:'EVT-'+Date.now(),idAnimal:document.getElementById('fe-animal').value,fecha:document.getElementById('fe-fecha').value,tipo:document.getElementById('fe-tipo').value,producto:document.getElementById('fe-producto').value.trim(),dosis:document.getElementById('fe-dosis').value.trim(),descripcion:document.getElementById('fe-descripcion').value.trim(),responsable:document.getElementById('fe-responsable').value.trim(),proximaFecha:document.getElementById('fe-proxima').value,observaciones:document.getElementById('fe-observaciones').value.trim()});
+  save(); navigate('sanidad');
+}
+
+function prepareRepro() {
+  document.getElementById('form-repro').reset();
+  document.getElementById('fr-animal').innerHTML=D.animales.map(a=>`<option value="${a.id}">${aLabel(a.id)} · ${a.categoria}</option>`).join('');
+  if(currentAnimalId) document.getElementById('fr-animal').value=currentAnimalId;
+  document.getElementById('fr-fecha').value=today();
+}
+function guardarRepro(e) {
+  e.preventDefault();
+  D.reproduccion.push({id:'REP-'+Date.now(),idAnimal:document.getElementById('fr-animal').value,fecha:document.getElementById('fr-fecha').value,tipo:document.getElementById('fr-tipo').value,detalle:document.getElementById('fr-detalle').value.trim(),responsable:document.getElementById('fr-responsable').value.trim(),observaciones:document.getElementById('fr-obs').value.trim()});
+  save(); navigate('reproduccion');
+}
+
+function prepareAlerta() {
+  document.getElementById('form-alerta').reset();
+  document.getElementById('fa-animal').innerHTML='<option value="">Sin animal específico</option>'+D.animales.map(a=>`<option value="${a.id}">${aLabel(a.id)}</option>`).join('');
+  document.getElementById('fa-fecha').value=today();
+}
+function guardarAlerta(e) {
+  e.preventDefault();
+  D.alertas.push({id:'ALT-'+Date.now(),titulo:document.getElementById('fa-titulo').value.trim(),descripcion:document.getElementById('fa-desc').value.trim(),idAnimal:document.getElementById('fa-animal').value||'',fecha:document.getElementById('fa-fecha').value,prioridad:document.getElementById('fa-prioridad').value,resuelta:false});
+  save(); navigate('alertas');
+}
+
+function prepareMovimiento() {
+  document.getElementById('form-movimiento').reset();
+  document.getElementById('fm-animal').innerHTML=D.animales.map(a=>`<option value="${a.id}">${aLabel(a.id)}</option>`).join('');
+  if(currentAnimalId) document.getElementById('fm-animal').value=currentAnimalId;
+  document.getElementById('fm-fecha').value=today();
+}
+function guardarMovimiento(e) {
+  e.preventDefault();
+  D.movimientos.push({id:'MOV-'+Date.now(),idAnimal:document.getElementById('fm-animal').value,fecha:document.getElementById('fm-fecha').value,origen:document.getElementById('fm-origen').value.trim(),destino:document.getElementById('fm-destino').value.trim(),motivo:document.getElementById('fm-motivo').value,responsable:document.getElementById('fm-responsable').value.trim()});
+  save(); navigate('movimientos');
+}
+
+function preparePesaje() {
+  document.getElementById('form-pesaje').reset();
+  document.getElementById('fp-animal').innerHTML=D.animales.map(a=>`<option value="${a.id}">${aLabel(a.id)}</option>`).join('');
+  if(currentAnimalId) document.getElementById('fp-animal').value=currentAnimalId;
+  document.getElementById('fp-fecha').value=today();
+}
+function guardarPesaje(e) {
+  e.preventDefault();
+  D.pesajes.push({id:'PES-'+Date.now(),idAnimal:document.getElementById('fp-animal').value,fecha:document.getElementById('fp-fecha').value,peso:Number(document.getElementById('fp-peso').value),responsable:document.getElementById('fp-responsable').value.trim(),observaciones:document.getElementById('fp-obs').value.trim()});
+  save(); navigate('pesajes');
+}
+
+// ============================================================
+// LISTAS GLOBALES
+// ============================================================
+function renderMovimientos() {
+  const s=[...D.movimientos].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.getElementById('movimientos-list').innerHTML=s.length?s.map(m=>`
+    <div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer border-b border-gray-50" onclick="navigate('detalle','${m.idAnimal}')">
+      <div><span class="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">${m.motivo}</span><span class="ml-2 text-sm text-gray-700">${m.origen} → ${m.destino}</span></div>
+      <div class="text-right ml-3 flex-shrink-0"><p class="text-xs text-gray-400">${fmt(m.fecha)}</p><p class="text-xs font-medium text-blue-700">${aLabel(m.idAnimal)}</p></div>
+    </div>`).join('')
+  :'<p class="text-sm text-gray-400 text-center py-12">Sin movimientos.</p>';
+}
+
+function renderPesajes() {
+  const s=[...D.pesajes].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.getElementById('pesajes-list').innerHTML=s.length?s.map(p=>`
+    <div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer border-b border-gray-50" onclick="navigate('detalle','${p.idAnimal}')">
+      <div><span class="text-sm font-bold text-gray-800">${p.peso} kg</span>${p.observaciones?`<span class="ml-2 text-xs text-gray-400">${p.observaciones}</span>`:''}</div>
+      <div class="text-right ml-3 flex-shrink-0"><p class="text-xs text-gray-400">${fmt(p.fecha)}</p><p class="text-xs font-medium text-gray-600">${aLabel(p.idAnimal)}</p></div>
+    </div>`).join('')
+  :'<p class="text-sm text-gray-400 text-center py-12">Sin pesajes.</p>';
+}
+
+// ============================================================
+// UTILIDADES
+// ============================================================
+function bc(e){return{Activo:'badge-activo',Vendido:'badge-vendido',Trasladado:'badge-trasladado',Faenado:'badge-faenado',Fallecido:'badge-fallecido'}[e]||'bg-gray-100 text-gray-600';}
+function eIcon(t){return{Vacuna:'💉',Desparasitación:'🐛',Tratamiento:'❤️‍🩹','Control veterinario':'🩺',Enfermedad:'🤒','Cirugía':'✂️'}[t]||'📋';}
+function eIconBg(t){return{Vacuna:'bg-green-100',Desparasitación:'bg-yellow-100',Tratamiento:'bg-red-100','Control veterinario':'bg-blue-100',Enfermedad:'bg-orange-100','Cirugía':'bg-purple-100'}[t]||'bg-gray-100';}
+function eColor(t){return{Vacuna:'bg-green-100 text-green-700',Desparasitación:'bg-yellow-100 text-yellow-700',Tratamiento:'bg-red-100 text-red-700','Control veterinario':'bg-blue-100 text-blue-700',Enfermedad:'bg-orange-100 text-orange-700','Cirugía':'bg-purple-100 text-purple-700'}[t]||'bg-gray-100 text-gray-700';}
+function aIcon(p){return{Alta:'🔴',Media:'🟡',Baja:'🔵'}[p]||'⚪';}
+function pBadge(p){return{Alta:'bg-red-100 text-red-700',Media:'bg-yellow-100 text-yellow-700',Baja:'bg-blue-100 text-blue-700'}[p]||'bg-gray-100 text-gray-600';}
+function fmt(s){if(!s)return'-';try{const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}catch{return s;}}
+function today(){return new Date().toISOString().split('T')[0];}
+
+// ============================================================
+// ARRANQUE
+// ============================================================
+initData();
+navigate('dashboard');
+</script>
+</body>
+</html>
